@@ -1,28 +1,37 @@
-version: '3'
+version: "3.8"
+
 services:
   mongodb:
-    image: "mongo"
-    ports:
-     - "27017:27017"
-  backend:
+    image: mongo:6
+    restart: unless-stopped
     environment:
-      POLYGON_SECRET:
-      OER_SECRET:
-    build: ./backend/
-    ports:
-      - "6200:6200"
+      MONGO_INITDB_ROOT_USERNAME: appuser
+      MONGO_INITDB_ROOT_PASSWORD: Str0ng_Pass_ChangeMe
     volumes:
-      - ./backend:/usr/src/app
+      - mongo_data:/data/db
+    expose:
+      - "27017"   # داخلي فقط، بدون فتح خارجي
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      PORT: 6200
+      MONGO_URL: mongodb://appuser:Str0ng_Pass_ChangeMe@mongodb:27017/appdb?authSource=admin
+      POLYGON_SECRET: ${POLYGON_SECRET}
+      OER_SECRET: ${OER_SECRET}
     depends_on:
       - mongodb
-  frontend:
-    build: ./frontend/
     ports:
-      # Prod port
-      # - "5000:5000"
-      # Dev port
-      - "3000:3000"
-    volumes:
-      - ./frontend:/usr/src/app
+      - "6200:6200"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
     depends_on:
       - backend
+    ports:
+      - "80:80"
+
+volumes:
+  mongo_data:

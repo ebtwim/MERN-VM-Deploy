@@ -1,23 +1,20 @@
-# #### For Development - macOS  ####
+# Backend Dockerfile
+FROM node:20-alpine
 
-# Development build and serve commands
-# Uncomment below to build and serve for development:
 
-FROM node:8.9.1-alpine
-RUN mkdir -p /usr/src/app
-WORKDIR /usr/src/app
+WORKDIR /app
 
-RUN npm i -g nodemon
 
-CMD [ "npm", "run", "dev" ]
+COPY package*.json yarn.lock* ./
 
-# #### For Production - Ubuntu 16.04 ####
+RUN npm ci --only=production || npm install --only=production
 
-# UBUNTU Production build and serve commands
-# Uncomment below to build and serve for production:
 
-# FROM node:8.9.1-alpine
-# COPY . .
-# RUN yarn install
-#
-# CMD [ "npm", "start" ]
+COPY . .
+
+
+ENV NODE_ENV=production
+EXPOSE 6200
+
+
+CMD ["node", "app.js"]
