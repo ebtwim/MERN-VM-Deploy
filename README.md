@@ -1,81 +1,110 @@
-# A Dockerized MERN Exchange Rate App
 
-A multi-container **Docker-compose** app with a React frontend, a Node/Express/mongoDB (the **MERN** stack).
+````markdown
+# MERN Stack App (Dockerized)
 
-[**Click to Run Demo**](http://128.199.130.212:5000)
+This project is a **3-tier MERN web app** deployed on an **Azure Ubuntu VM** using Docker and Docker Compose.  
+It includes:
+- **MongoDB** (Database)
+- **Node.js/Express** (Backend API)
+- **React + Nginx** (Frontend)
 
-Currently deployed to a [**Digital Ocean**](https://m.do.co/c/977d7ae68b56) droplet running **Ubuntu 16.04**.
+---
 
+## 🚀 Steps Performed
 
-### Table of Contents
+### 1. VM Setup
+- Created Ubuntu 22.04 VM on Azure.
+- Connected via SSH using SSH key:
+  ```bash
+  ssh azureuser@<VM_PUBLIC_IP>
+````
 
-+ [Installation Instructions](#installation-instructions)
-+ [Three-tier Architecture](#three-tier-architecture)
-+ [Dev Decisions](#dev-decisions)
-  + [Why Axios?](#why-axios)
-  + [Why Docker-compose?](#why-docker-compose)
-  + [Why Digital Ocean?](#why-digital-ocean)
-+ [Frontend](#frontend)
-+ [Backend](#backend)
-+ [Potential Improvements](#potential-improvements)
+### 2. Install Docker & Git
 
+```bash
+sudo apt-get update -y
+sudo apt-get install -y ca-certificates curl gnupg lsb-release git
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+| sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update -y
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
 
-## Installation Instructions
-**Prerequisites:**
-1. [DockerCE](https://www.docker.com/community-edition)  
-2. [docker-compose](https://docs.docker.com/compose/install/)
-3. A free-tier Open Exchange Rates API Key (https://openexchangerates.org/)
-4. A free-tier Polygon.io API Key (https://polygon.io)
+### 3. Clone Project
 
-**Clone and Run**
-1. `git clone git@github.com:njwest/MERN-Docker-ExRates.git [NewAppDir]`
-2. `cd [NewAppDir]`
-3. Add your Polygon and Open Exchange Rate secrets to the relevant fields in `docker-compose.yaml`
-3. `docker-compose build`
-4. `docker-compose up`
+```bash
+git clone https://github.com/ebtwim/MERN-Docker.git mern-app
+cd mern-app
+```
 
+### 4. Environment Variables
 
-## Three-tier Architecture
+Created `.env`:
 
-This app was developed with three-tier architecture, as in Frontend<->API Server<->Database.
+```bash
+MONGO_USER=appuser
+MONGO_PASS=Str0ng_Pass_ChangeMe
+MONGO_DB=appdb
+MONGO_URL=mongodb://appuser:Str0ng_Pass_ChangeMe@mongodb:27017/appdb?authSource=admin
+API_PORT=6200
+JWT_SECRET=change_this_to_long_random
+POLYGON_SECRET=your_api_key_here
+OER_SECRET=your_api_key_here
+```
 
-![App Architecture Diagram](https://github.com/njwest/MERN-Docker-ExRates/blob/master/3-tier-diagram.png "App Architecture Diagram")
+### 5. Dockerfiles
 
+* **Backend** updated to Node 20 with proper `npm install`.
+* **Frontend** switched to production build served by **Nginx**.
 
-## Dev Decisions
+### 6. Backend Fixes
 
-##### Why Axios
+* Updated `app.js`:
 
-I opted to use **Axios** rather than the native **fetch()** method for API calls in this project, as Axios does not require the `json()` method in order to transfer JSON data, and fetch() does not return errors on `400 - Bad Request` responses.
+  * MongoDB connection using `MONGO_URL` env var.
+  * Added `/health` endpoint.
+  * Ensured server listens on `0.0.0.0`.
 
-##### Why Docker-compose
+### 7. docker-compose.yml
 
-I used **Docker** for this project because Docker containers provide easily configurable, independent Node versions per each container. Docker also provides great **logging** capabilities by default.
+Configured 3 services:
 
-I opted to use **docker-compose** to build this app as it creates network relationships between different Docker containers. Docker-compose also provides common environment variables across containers (with V3 specified in docker-compose.yaml).
+* **mongodb** (internal only, no external port)
+* **backend** (Express, port 6200)
+* **frontend** (Nginx serving React, port 80)
 
-##### Why Digital Ocean
+### 8. Build & Run
 
-I deployed this demo to a [**Digital Ocean droplet**](https://m.do.co/c/977d7ae68b56) because said droplets are inexpensive VPSs with static IPs with root access.
+```bash
+docker compose down -v
+docker compose up -d --build
+docker compose ps
+```
 
-To my mind, [**Digital Ocean VPSs**](https://m.do.co/c/977d7ae68b56) are ideal for demoing, as building the same demo on a network of AWS or GCP services would cost more time and money for features this demo will not need.
+### 9. Test
 
+```bash
+# Backend health
+curl http://localhost:6200/health
 
-## Frontend
+# Frontend (via Nginx)
+curl -I http://localhost
+```
 
-For an overview of the **React frontend**, visit the [**Frontend Readme**](https://github.com/njwest/MERN-Docker-ExRates/tree/master/frontend#frontend-with-react)
+### 10. Access
 
+Open in browser:
 
-## Backend
+```
+http://<VM_PUBLIC_IP>/
+```
 
-For an overview of the **Node with mongoDB backend**, visit the [**Backend Readme**](https://github.com/njwest/MERN-Docker-ExRates/tree/master/backend#backend-with-node-and-mongodb)
+---
 
-
-## Potential Improvements
-
-1. **Reduxify** the frontend Converter component to add currency names and rates to a shared Redux store, to reduce the need for API calls on component load.
-2. Save frontend state to client **Local Storage** so the app works offline.
-3. Implement **NGINX** reverse proxy for web server/HTTP management.
-4. Add SSL certification for HTTPS.
-5. Add real-time chart to the Socket.IO client component.
-6. Implement better logic to API/backup comparison of Currency Names object for the Converter.
